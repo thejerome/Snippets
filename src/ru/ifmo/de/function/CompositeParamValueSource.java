@@ -7,10 +7,10 @@ import java.util.function.Predicate;
 /**
  * Created by efimchick on 02.03.17.
  */
-public class CombinedValueParamValueSource implements ParamValueSource {
+public class CompositeParamValueSource implements ParamValueSource {
     private final ParamValueSource[] sources;
 
-    public CombinedValueParamValueSource(ParamValueSource... sources) {
+    public CompositeParamValueSource(ParamValueSource... sources) {
         this.sources = sources;
     }
 
@@ -33,7 +33,7 @@ public class CombinedValueParamValueSource implements ParamValueSource {
         Optional<Object> optValue = Arrays.stream(sources).sequential()
                 .map(s -> s.getParamValue(paramName))
                 .filter(v -> v != null)
-                .filter(v -> clazz != null && clazz.isInstance(v))
+                .filter(v -> clazz == null || clazz.isInstance(v))
                 .findFirst();
 
         return optValue.isPresent() ? (T) optValue.get() : null;
