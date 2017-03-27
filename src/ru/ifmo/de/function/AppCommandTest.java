@@ -4,10 +4,10 @@ import com.google.common.collect.Lists;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.SystemOutRule;
-import org.mockito.Mockito;
 import ru.ifmo.de.function.classconverters.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +18,7 @@ import static com.google.common.collect.Sets.newHashSet;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class AppCommandTest {
@@ -119,7 +120,7 @@ public class AppCommandTest {
 
         HttpServletRequest request = getHttpServletRequestMock();
 
-        ParamValueSource paramValueSource = new HttpServleRequestParamsParamValueSource(request);
+        ParamValueSource paramValueSource = new HttpServletRequestParamsParamValueSource(request);
 
         assertThat(paramValueSource.getParamValue("1"), is(new String[]{"http11", "http12"}));
         assertThat(paramValueSource.getParamValue("2"), is(new String[]{"http21"}));
@@ -130,7 +131,7 @@ public class AppCommandTest {
 
     @Test
     public void ClassConverterParamValueSourceBasicApi(){
-        ParamValueSource innerSource = new HttpServleRequestParamsParamValueSource(getHttpServletRequestMock());
+        ParamValueSource innerSource = new HttpServletRequestParamsParamValueSource(getHttpServletRequestMock());
         List<ClassConverter> converters = Lists.newArrayList(
             new StringArrayToStringClassConverter()
         );
@@ -146,7 +147,7 @@ public class AppCommandTest {
 
     @Test
     public void integerClassConverterFromHttpRequestSuccessful(){
-        ParamValueSource innerSource = new HttpServleRequestParamsParamValueSource(
+        ParamValueSource innerSource = new HttpServletRequestParamsParamValueSource(
             getHttpServletRequestIntegerMock()
         );
         List<ClassConverter> converters = Lists.newArrayList(
@@ -160,7 +161,6 @@ public class AppCommandTest {
             new StringArrayToLongArrayClassConverter(),
             new StringArrayToLongClassConverter(),
             new StringArrayToTimestampClassConverter()
-
         );
         ParamValueSource source = new ClassConverterParamValueSource(innerSource, converters);
 
@@ -178,6 +178,17 @@ public class AppCommandTest {
     }
 
 
+    @Test
+    public void HttpSessionParamValueSourceBasicApi(){
+        HttpSession session = getHttpSessionMock();
+        ParamValueSource source = new HttpSessionParamValueSource(session);
+
+        assertThat(source.getParamValue("1"), is("111"));
+        assertThat(source.getParamValue("1", String.class), is("111"));
+        assertThat(source.getParamValue("1", Integer.class), nullValue());
+        assertThat(source.getParamValue("2"), is("222"));
+        assertThat(source.getParamValue("3"), is(new BigDecimal(333)));
+    }
 
 
 
@@ -191,8 +202,8 @@ public class AppCommandTest {
 
 
 
-    private HttpServletRequest getHttpServletRequestMock() {
-        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        private HttpServletRequest getHttpServletRequestMock() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getParameter("1")).thenReturn("http11");
         when(request.getParameter("2")).thenReturn("http21");
         when(request.getParameterValues("1")).thenReturn(new String[]{"http11", "http12"});
@@ -208,7 +219,7 @@ public class AppCommandTest {
     }
 
     private HttpServletRequest getHttpServletRequestIntegerMock() {
-        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getParameter("1")).thenReturn("111");
         when(request.getParameter("2")).thenReturn("222");
         when(request.getParameterValues("1")).thenReturn(new String[]{"111", "112"});
@@ -221,5 +232,14 @@ public class AppCommandTest {
             }
         });
         return request;
+    }
+
+    private HttpSession getHttpSessionMock() {
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute("1")).thenReturn("111");
+        when(session.getAttribute("2")).thenReturn("222");
+        when(session.getAttribute("3")).thenReturn(new BigDecimal(333));
+
+        return session;
     }
 }

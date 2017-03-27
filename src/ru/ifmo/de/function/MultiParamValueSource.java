@@ -2,6 +2,7 @@ package ru.ifmo.de.function;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -11,10 +12,31 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class MultiParamValueSource implements ParamValueSource{
 
-    private Map<String, Object> storage = new HashMap<>();
+    protected interface Storage{
+        Object get(String paramName);
+    }
 
-    public MultiParamValueSource(Map paramAndValues) {
-        storage.putAll(paramAndValues);
+    private static class MapStorage implements Storage{
+        private final Map<String, Object> paramAndValues = new HashMap<>();
+
+        public MapStorage(Map<String, ? extends Object> paramAndValues) {
+            this.paramAndValues.putAll(paramAndValues);
+        }
+
+        @Override
+        public Object get(String paramName) {
+            return paramAndValues.get(paramName);
+        }
+    }
+
+    private Storage storage;
+
+    public MultiParamValueSource(Map<String, ? extends Object> paramAndValues) {
+        this (new MapStorage(paramAndValues));
+    }
+
+    protected MultiParamValueSource(Storage storage){
+        this.storage = storage;
     }
 
     @Override
