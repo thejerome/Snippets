@@ -1,6 +1,11 @@
 package ru.ifmo.de.function;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import oracle.jdbc.OracleTypes;
+import oracle.jdbc.oracore.OracleType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.SystemOutRule;
@@ -9,6 +14,7 @@ import ru.ifmo.de.function.classconverters.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +26,8 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static ru.ifmo.de.function.Parameter.Direction.IN;
+import static ru.ifmo.de.function.Parameter.Direction.OUT;
 
 public class AppCommandTest {
 
@@ -35,12 +43,56 @@ public class AppCommandTest {
 
     @Test
     public void appFunctionBasicImplementationsAPI() throws Exception {
-        AppFunction af = new SoutParamValueAppFunction("output");
-        ParamValueSource paramValueSource = new SingleParamValueSource("output", "sum41");
-        AppFunctionResult result = af.call(paramValueSource);
-        assertThat(result.isSuccessful(), is(true));
-        assertThat(soutRule.getLog().trim(), is("sum41"));
 
+        {
+            Parameter<String> toOutputParam = new Parameter<>("output", String.class, IN);
+            AppFunction af = new SoutParamValueAppFunction(toOutputParam);
+
+            ParamValueSource paramValueSource = new SingleParamValueSource("output", "sum41");
+            AppFunctionResult result = af.call(paramValueSource);
+            assertThat(result.isSuccessful(), is(true));
+            assertThat(soutRule.getLog().trim(), is("sum41"));
+        }
+        {
+            Parameter toOutputParam = new Parameter("output", IN);
+            AppFunction af = new SoutParamValueAppFunction(toOutputParam);
+
+            ParamValueSource paramValueSource = new SingleParamValueSource("output", "sum41");
+            AppFunctionResult result = af.call(paramValueSource);
+            assertThat(result.isSuccessful(), is(true));
+            assertThat(soutRule.getLog().trim(), is("sum41\nsum41"));
+        }
+
+    }
+
+    @Test
+    public void parameterApiInAnonimousAppFunction() throws Exception {
+        Parameter nonClassedInParam = new Parameter("nonClassedIn", Object.class, IN);
+        Parameter<String> stringClassedInParam = new Parameter<String>("stringClassedIn", String.class, IN);
+        Parameter nonClassedOutParam = new Parameter("stringClassedOut", Object.class, OUT);
+        Parameter<String> stringClassedOutParam = new Parameter<String>("stringClassedOut", String.class, OUT);
+
+
+        AppFunction function = new AppFunction() {
+            @Override
+            public AppFunctionResult call(ParamValueSource paramValueSource) {
+                nonClassedInParam.lookForValue(paramValueSource);
+                stringClassedInParam.lookForValue(paramValueSource);
+
+                return new SuccessfulEmptyAppFunctionResult();
+            }
+        };
+
+
+        ArrayList<String> keys = Lists.<String>newArrayList("nonClassedIn", "stringClassedOut");
+        Function<String, String> stringStringFunction = s -> s;
+        ImmutableMap<String, String> paramAndValues = Maps.toMap(keys, stringStringFunction);
+
+        ParamValueSource paramValueSource = new MultiParamValueSource(
+                paramAndValues
+        );
+        AppFunctionResult result = function.call(paramValueSource);
+        assertThat(result.isSuccessful(), is(true));
 
     }
 
@@ -116,7 +168,7 @@ public class AppCommandTest {
     }
 
     @Test
-    public void httpServletRequestParamValueSourceBasicTest(){
+    public void httpServletRequestParamValueSourceBasicTest() {
 
         HttpServletRequest request = getHttpServletRequestMock();
 
@@ -130,10 +182,10 @@ public class AppCommandTest {
 
 
     @Test
-    public void ClassConverterParamValueSourceBasicApi(){
+    public void ClassConverterParamValueSourceBasicApi() {
         ParamValueSource innerSource = new HttpServletRequestParamsParamValueSource(getHttpServletRequestMock());
         List<ClassConverter> converters = Lists.newArrayList(
-            new StringArrayToStringClassConverter()
+                new StringArrayToStringClassConverter()
         );
         ParamValueSource source = new ClassConverterParamValueSource(innerSource, converters);
 
@@ -146,40 +198,69 @@ public class AppCommandTest {
     }
 
     @Test
-    public void integerClassConverterFromHttpRequestSuccessful(){
+    public void integerClassConverterFromHttpRequestSuccessful() {
         ParamValueSource innerSource = new HttpServletRequestParamsParamValueSource(
-            getHttpServletRequestIntegerMock()
+                getHttpServletRequestIntegerMock()
         );
         List<ClassConverter> converters = Lists.newArrayList(
-            new StringArrayToIntegerArrayClassConverter(),
-            new StringArrayToIntegerClassConverter(),
-            new StringArrayToStringClassConverter(),
-            new StringArrayToBigDecimalArrayClassConverter(),
-            new StringArrayToBigDecimalClassConverter(),
-            new StringArrayToDoubleArrayClassConverter(),
-            new StringArrayToDoubleClassConverter(),
-            new StringArrayToLongArrayClassConverter(),
-            new StringArrayToLongClassConverter(),
-            new StringArrayToTimestampClassConverter()
+                new StringArrayToIntegerArrayClassConverter(),
+                new StringArrayToIntegerClassConverter(),
+                new StringArrayToStringClassConverter(),
+                new StringArrayToBigDecimalArrayClassConverter(),
+                new StringArrayToBigDecimalClassConverter(),
+                new StringArrayToDoubleArrayClassConverter(),
+                new StringArrayToDoubleClassConverter(),
+                new StringArrayToLongArrayClassConverter(),
+                new StringArrayToLongClassConverter(),
+                new StringArrayToTimestampClassConverter()
         );
         ParamValueSource source = new ClassConverterParamValueSource(innerSource, converters);
 
         assertThat(source.getParamValue("1"), is(new String[]{"111", "112"}));
         assertThat(source.getParamValue("1", String.class), is("111,112"));
         assertThat(source.getParamValue("1", Integer.class), is(111));
-        assertThat(source.getParamValue("1", Integer[].class), is( new Integer[]{111, 112}));
+        assertThat(source.getParamValue("1", Integer[].class), is(new Integer[]{111, 112}));
         assertThat(source.getParamValue("1", Long.class), is(111L));
-        assertThat(source.getParamValue("1", Long[].class), is( new Long[]{111L, 112L}));
+        assertThat(source.getParamValue("1", Long[].class), is(new Long[]{111L, 112L}));
         assertThat(source.getParamValue("2"), is(new String[]{"222"}));
         assertThat(source.getParamValue("2", String.class), is("222"));
         assertThat(source.getParamValue("2", Integer.class), is(222));
-        assertThat(source.getParamValue("2", Integer[].class), is( new Integer[]{222}));
+        assertThat(source.getParamValue("2", Integer[].class), is(new Integer[]{222}));
 
     }
 
 
     @Test
-    public void HttpSessionParamValueSourceBasicApi(){
+    public void oracleTypeParameterBasicApi() {
+        //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
+
+        Parameter p = new OracleTypeParameter("name", OracleTypes.VARCHAR, IN);
+
+
+
+    }
+
+    @Test
+    public void sqlCallableStatementFunctionBasicApi() {
+        //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
+
+
+
+
+    }
+
+
+
+
+/*
+    new RecParam("KEY", "NUMBER", 1, "IN"),
+    new RecParam("DIGITAL_CODE", "NUMBER", 2, "IN"),
+    new RecParam("XML", "CLOB", 3, "OUT"),
+    new RecParam("XSL", "CLOB", 4, "OUT"),
+    new RecParam("XSL_ID", "NUMBER", 5, "OUT")
+*/
+    @Test
+    public void HttpSessionParamValueSourceBasicApi() {
         HttpSession session = getHttpSessionMock();
         ParamValueSource source = new HttpSessionParamValueSource(session);
 
@@ -191,25 +272,14 @@ public class AppCommandTest {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-        private HttpServletRequest getHttpServletRequestMock() {
+    private HttpServletRequest getHttpServletRequestMock() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getParameter("1")).thenReturn("http11");
         when(request.getParameter("2")).thenReturn("http21");
         when(request.getParameterValues("1")).thenReturn(new String[]{"http11", "http12"});
         when(request.getParameterValues("2")).thenReturn(new String[]{"http21"});
 
-        when(request.getParameterMap()).thenReturn(new HashMap<String, String[]>(){
+        when(request.getParameterMap()).thenReturn(new HashMap<String, String[]>() {
             {
                 put("1", new String[]{"http11", "http12"});
                 put("2", new String[]{"http21"});
@@ -225,7 +295,7 @@ public class AppCommandTest {
         when(request.getParameterValues("1")).thenReturn(new String[]{"111", "112"});
         when(request.getParameterValues("2")).thenReturn(new String[]{"222"});
 
-        when(request.getParameterMap()).thenReturn(new HashMap<String, String[]>(){
+        when(request.getParameterMap()).thenReturn(new HashMap<String, String[]>() {
             {
                 put("1", new String[]{"111", "112"});
                 put("2", new String[]{"222"});
