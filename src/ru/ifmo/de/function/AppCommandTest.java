@@ -1,19 +1,21 @@
 package ru.ifmo.de.function;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import oracle.jdbc.OracleTypes;
-import oracle.jdbc.oracore.OracleType;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.SystemOutRule;
+import org.powermock.reflect.Whitebox;
 import ru.ifmo.de.function.classconverters.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.math.BigDecimal;
+import java.sql.CallableStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.Sets.newHashSet;
+import static oracle.jdbc.driver.OracleTypes.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -234,9 +237,28 @@ public class AppCommandTest {
     public void oracleTypeParameterBasicApi() {
         //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
 
-        Parameter p = new OracleTypeParameter("name", OracleTypes.VARCHAR, IN);
+        //used in AcademicNT
+        int integer = INTEGER;
+        int varchar = VARCHAR;
+        int clob = CLOB;
+        int cursor = CURSOR;
+        int decimal = DECIMAL;
+        int date = DATE;
+        int longvarchar = LONGVARCHAR;
+        int blob = BLOB;
 
 
+        int position = 1;
+
+        OracleTypeParameter intparam = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
+        OracleTypeParameter varcharparam = new TextOracleTypeParameter("varcharparam", IN, VARCHAR, 2);
+
+        List<OracleTypeParameter> params = ImmutableList.of(intparam, varcharparam);
+
+
+        CallableStatement cs = null;
+
+        intparam.prepareCallableStatement(cs);
 
     }
 
@@ -244,11 +266,50 @@ public class AppCommandTest {
     public void sqlCallableStatementFunctionBasicApi() {
         //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
 
+        OracleTypeParameter retparam = new OracleTypeParameter("returning", INTEGER, 0, IN);
+        OracleTypeParameter intparam = new OracleTypeParameter("intparam", INTEGER, 1, IN);
+        OracleTypeParameter varcharparam = new OracleTypeParameter("intparam", INTEGER, 1, IN);
 
+        List<OracleTypeParameter> params = ImmutableList.of(intparam, varcharparam);
 
+        String fullName = "DE_COMMON.LOGON";
+        AppFunction sqlFunction = new SimpleSqlStoredFunctionAppFunction(fullName, params);
+
+        String parameterTemplate = null;
+        String query = null;
+        try {
+            parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
+            query = Whitebox.invokeMethod(sqlFunction, "getQuery");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertThat(parameterTemplate, is( "(?,?)"));
+        assertThat(query, is( "{call DE_COMMON.LOGON(?,?)}"));
+
+        try {
+            parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
+            query = Whitebox.invokeMethod(sqlFunction, "getQuery");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertThat(parameterTemplate, is( "(?,?)"));
+        assertThat(query, is( "{call DE_COMMON.LOGON(?,?)}"));
+
+        sqlFunction = new SimpleSqlStoredFunctionAppFunction("DE_COMMON.LOGON", ImmutableList.of(retparam, intparam, varcharparam));
+
+        try {
+            parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
+            query = Whitebox.invokeMethod(sqlFunction, "getQuery");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertThat(parameterTemplate, is( "(?,?)"));
+        assertThat(query, is( "{? = call DE_COMMON.LOGON(?,?)}"));
 
     }
-
 
 
 

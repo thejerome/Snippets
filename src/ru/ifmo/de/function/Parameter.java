@@ -20,14 +20,11 @@ public class Parameter<T> {
 
     public Parameter(String name, Class<T> clazz, Direction direction) {
         checkNotNull(name);
+        checkNotNull(clazz);
         checkNotNull(direction);
         this.name = name;
         this.clazz = clazz;
         this.direction = direction;
-    }
-
-    public Parameter(String name, Direction direction) {
-        this(name, null, direction);
     }
 
     public boolean isInput() {
@@ -40,6 +37,7 @@ public class Parameter<T> {
 
 
     public T lookForValue(ParamValueSource paramValueSource) {
+        checkNotNull(paramValueSource);
         if (clazz == null) return (T) paramValueSource.getParamValue(name);
         else return paramValueSource.getParamValue(name, clazz);
     }
