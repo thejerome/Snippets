@@ -57,7 +57,7 @@ public class AppCommandTest {
             assertThat(soutRule.getLog().trim(), is("sum41"));
         }
         {
-            Parameter toOutputParam = new Parameter("output", IN);
+            Parameter toOutputParam = new Parameter("output", Object.class, IN);
             AppFunction af = new SoutParamValueAppFunction(toOutputParam);
 
             ParamValueSource paramValueSource = new SingleParamValueSource("output", "sum41");
@@ -257,8 +257,9 @@ public class AppCommandTest {
 
 
         CallableStatement cs = null;
+        ParamValueSource valueSource = null;
 
-        intparam.prepareCallableStatement(cs);
+        intparam.prepareCallableStatement(valueSource, cs);
 
     }
 
@@ -266,11 +267,11 @@ public class AppCommandTest {
     public void sqlCallableStatementFunctionBasicApi() {
         //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
 
-        OracleTypeParameter retparam = new OracleTypeParameter("returning", INTEGER, 0, IN);
-        OracleTypeParameter intparam = new OracleTypeParameter("intparam", INTEGER, 1, IN);
-        OracleTypeParameter varcharparam = new OracleTypeParameter("intparam", INTEGER, 1, IN);
+        OracleTypeParameter retparam = new NumberOracleTypeParameter("returning", OUT, INTEGER, 0);
+        OracleTypeParameter intparam = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
+        OracleTypeParameter int2param = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
 
-        List<OracleTypeParameter> params = ImmutableList.of(intparam, varcharparam);
+        List<OracleTypeParameter> params = ImmutableList.of(intparam, int2param);
 
         String fullName = "DE_COMMON.LOGON";
         AppFunction sqlFunction = new SimpleSqlStoredFunctionAppFunction(fullName, params);
@@ -297,7 +298,7 @@ public class AppCommandTest {
         assertThat(parameterTemplate, is( "(?,?)"));
         assertThat(query, is( "{call DE_COMMON.LOGON(?,?)}"));
 
-        sqlFunction = new SimpleSqlStoredFunctionAppFunction("DE_COMMON.LOGON", ImmutableList.of(retparam, intparam, varcharparam));
+        sqlFunction = new SimpleSqlStoredFunctionAppFunction("DE_COMMON.LOGON", ImmutableList.of(retparam, intparam, int2param));
 
         try {
             parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
