@@ -5,7 +5,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
+import oracle.jdbc.driver.OracleCallableStatement;
+import org.hamcrest.CoreMatchers;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.SystemOutRule;
@@ -15,7 +16,6 @@ import ru.ifmo.de.function.classconverters.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.math.BigDecimal;
-import java.sql.CallableStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.Sets.newHashSet;
+import static java.lang.Boolean.*;
 import static oracle.jdbc.driver.OracleTypes.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -30,6 +31,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static ru.ifmo.de.function.Parameter.Direction.IN;
+import static ru.ifmo.de.function.Parameter.Direction.INOUT;
 import static ru.ifmo.de.function.Parameter.Direction.OUT;
 
 public class AppCommandTest {
@@ -235,6 +237,8 @@ public class AppCommandTest {
 
     @Test
     public void oracleTypeParameterBasicApi() {
+        //FUNCTION signAwardPortfolio(key IN NUMBER, ID_ IN NUMBER, back IN LONG, xml IN OUT CLOB, xsl IN OUT CLOB, xsl_id IN OUT NUMBER) RETURN NUMBER;
+
         //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
 
         //used in AcademicNT
@@ -252,15 +256,63 @@ public class AppCommandTest {
 
         OracleTypeParameter intparam = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
         OracleTypeParameter varcharparam = new TextOracleTypeParameter("varcharparam", IN, VARCHAR, 2);
+        OracleTypeParameter clobparam = new InputClobOracleTypeParameter("clobparam", 3);
+        OracleTypeParameter xmlparam = new OutputClobOracleTypeParameter("XML", 4);
 
         List<OracleTypeParameter> params = ImmutableList.of(intparam, varcharparam);
-
-
-        CallableStatement cs = null;
-        ParamValueSource valueSource = null;
-
+        OracleCallableStatement cs = mock(OracleCallableStatement.class);
+        ParamValueSource valueSource = new SingleParamValueSource<>("1", "1");
         intparam.prepareCallableStatement(valueSource, cs);
 
+    }
+
+
+    @Test
+    public void sqlCallableStatementFunctionRealExampleQueryIsOk() {
+        NumberOracleTypeParameter ret = new NumberOracleTypeParameter("return", OUT, NUMBER, 0);
+        NumberOracleTypeParameter key = new NumberOracleTypeParameter("KEY", IN, NUMBER, 1);
+        NumberOracleTypeParameter id = new NumberOracleTypeParameter("ID_", IN, NUMBER, 2);
+        TextOracleTypeParameter back = new TextOracleTypeParameter("BACK", IN, LONGVARCHAR, 3);
+        OutputClobOracleTypeParameter xml = new OutputClobOracleTypeParameter("XML", 4);
+        OutputClobOracleTypeParameter xsl = new OutputClobOracleTypeParameter("XSL", 5);
+        NumberOracleTypeParameter xslid = new NumberOracleTypeParameter("XSL_ID", INOUT, NUMBER, 6);
+
+        List<OracleTypeParameter> params = ImmutableList.of(ret, key, id, back, xml, xsl, xslid);
+
+
+
+
+        SimpleSqlStoredFunctionAppFunction sqlFunction = new SimpleSqlStoredFunctionAppFunction("DE_PORTFOLIO.signAwardPortfolio", params);
+
+
+        String parameterTemplate = null;
+        String query = null;
+        try {
+            parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
+            query = Whitebox.invokeMethod(sqlFunction, "getQuery");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertThat(parameterTemplate, is("(?,?,?,?,?,?)"));
+        assertThat(query, is("{? = call DE_PORTFOLIO.signAwardPortfolio(?,?,?,?,?,?)}"));
+
+    }
+
+    @Test
+    public void directionIsSetProperly(){
+        NumberOracleTypeParameter ret = new NumberOracleTypeParameter("return", OUT, NUMBER, 1);
+        assertThat(ret.direction, is(OUT));
+        assertThat(ret.isInput(), is(is(FALSE)));
+        assertThat(ret.isOutput(), is(is(TRUE)));
+        ret = new NumberOracleTypeParameter("return", IN, NUMBER, 1);
+        assertThat(ret.direction, is(IN));
+        assertThat(ret.isInput(), is(is(TRUE)));
+        assertThat(ret.isOutput(), is(is(FALSE)));
+        ret = new NumberOracleTypeParameter("return", INOUT, NUMBER, 1);
+        assertThat(ret.direction, is(INOUT));
+        assertThat(ret.isInput(), is(is(TRUE)));
+        assertThat(ret.isOutput(), is(is(TRUE)));
     }
 
     @Test
@@ -285,8 +337,8 @@ public class AppCommandTest {
             e.printStackTrace();
         }
 
-        assertThat(parameterTemplate, is( "(?,?)"));
-        assertThat(query, is( "{call DE_COMMON.LOGON(?,?)}"));
+        assertThat(parameterTemplate, is("(?,?)"));
+        assertThat(query, is("{call DE_COMMON.LOGON(?,?)}"));
 
         try {
             parameterTemplate = Whitebox.invokeMethod(sqlFunction, "getParameterTemplate");
@@ -295,8 +347,8 @@ public class AppCommandTest {
             e.printStackTrace();
         }
 
-        assertThat(parameterTemplate, is( "(?,?)"));
-        assertThat(query, is( "{call DE_COMMON.LOGON(?,?)}"));
+        assertThat(parameterTemplate, is("(?,?)"));
+        assertThat(query, is("{call DE_COMMON.LOGON(?,?)}"));
 
         sqlFunction = new SimpleSqlStoredFunctionAppFunction("DE_COMMON.LOGON", ImmutableList.of(retparam, intparam, int2param));
 
@@ -307,20 +359,19 @@ public class AppCommandTest {
             e.printStackTrace();
         }
 
-        assertThat(parameterTemplate, is( "(?,?)"));
-        assertThat(query, is( "{? = call DE_COMMON.LOGON(?,?)}"));
+        assertThat(parameterTemplate, is("(?,?)"));
+        assertThat(query, is("{? = call DE_COMMON.LOGON(?,?)}"));
 
     }
 
 
-
-/*
-    new RecParam("KEY", "NUMBER", 1, "IN"),
-    new RecParam("DIGITAL_CODE", "NUMBER", 2, "IN"),
-    new RecParam("XML", "CLOB", 3, "OUT"),
-    new RecParam("XSL", "CLOB", 4, "OUT"),
-    new RecParam("XSL_ID", "NUMBER", 5, "OUT")
-*/
+    /*
+        new RecParam("KEY", "NUMBER", 1, "IN"),
+        new RecParam("DIGITAL_CODE", "NUMBER", 2, "IN"),
+        new RecParam("XML", "CLOB", 3, "OUT"),
+        new RecParam("XSL", "CLOB", 4, "OUT"),
+        new RecParam("XSL_ID", "NUMBER", 5, "OUT")
+    */
     @Test
     public void HttpSessionParamValueSourceBasicApi() {
         HttpSession session = getHttpSessionMock();

@@ -10,9 +10,9 @@ import static ru.ifmo.de.function.Parameter.Direction.OUT;
  * Created by efimchick on 27.03.17.
  */
 public class Parameter<T> {
-    private final String name;
-    private final Class<T> clazz;
-    private final Direction direction;
+    protected final String name;
+    protected final Class<T> clazz;
+    protected final Direction direction;
 
     enum Direction{
         IN, OUT, INOUT
@@ -42,4 +42,12 @@ public class Parameter<T> {
         else return paramValueSource.getParamValue(name, clazz);
     }
 
+    @Override
+    public String toString() {
+        return "Parameter{" +
+                "name='" + name + '\'' +
+                ", clazz=" + clazz +
+                ", direction=" + direction +
+                '}';
+    }
 }

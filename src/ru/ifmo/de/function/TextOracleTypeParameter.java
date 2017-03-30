@@ -1,6 +1,7 @@
 package ru.ifmo.de.function;
 
 import com.google.common.base.Preconditions;
+import oracle.jdbc.driver.OracleCallableStatement;
 
 import java.sql.CallableStatement;
 import java.sql.SQLException;
@@ -18,31 +19,14 @@ public class TextOracleTypeParameter extends OracleTypeParameter<String> {
 
 
     @Override
-    public boolean prepareCallableStatement(ParamValueSource valueSource, CallableStatement cs) {
-        checkNotNull(cs);
-        boolean res = false;
-        if (isInput()){
-            try{
-                cs.setString(position, lookForValue(valueSource));
-                res = true;
-            } catch (Exception e){
-                //stay false
-            }
-        }
-
-        if (isOutput()){
-            try {
-                cs.registerOutParameter(position, oracleType);
-                res = true;
-            } catch (SQLException e) {
-                res = false;
-            }
-        }
-        return res;
+    public boolean prepareCallableStatement(ParamValueSource valueSource, OracleCallableStatement cs) {
+        return inAndOutCommonPreparing(valueSource, cs);
     }
 
+
+
     @Override
-    public String getValue(CallableStatement cs) {
+    public String getValue(OracleCallableStatement cs) {
         checkNotNull(cs);
         String res = null;
         return res;
