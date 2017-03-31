@@ -5,13 +5,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import dlc.servlet.RecParam;
 import oracle.jdbc.driver.OracleCallableStatement;
-import org.hamcrest.CoreMatchers;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.SystemOutRule;
 import org.powermock.reflect.Whitebox;
 import ru.ifmo.de.function.classconverters.*;
+import ru.ifmo.de.function.recparam.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -26,6 +27,7 @@ import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.Boolean.*;
 import static oracle.jdbc.driver.OracleTypes.*;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -384,6 +386,51 @@ public class AppCommandTest {
         assertThat(source.getParamValue("3"), is(new BigDecimal(333)));
     }
 
+    @Test
+    public void RecParamRetValConvertation(){
+        RecParam rp = new RecParam("func_ret", "NUMBER", 0, "OUT");
+
+        RecParamFilter retValRecParamFilter = new RetValRecParamFilter();
+        OracleTypeParameterFactory<BigDecimal> parameterFactory = new RetValOracleTypeParameterFactory();
+
+        SingleRecParamToOracleTypeParameterConverter retValConverter = new SingleRecParamToOracleTypeParameterConverter(
+                retValRecParamFilter,
+                parameterFactory
+        ) ;
+
+        assertThat(retValConverter.convert(rp), notNullValue());
+        assertThat(retValConverter.convert(rp).name, is("retVal"));
+    }
+
+    @Test
+    public void Convertation() {
+
+        ParamValueSourceBuilderFactory factory = null;
+        ParamValueSource paramValueSource = factory.builder()
+                .build();
+    }
+
+        @Test
+    public void RecParamConvertation(){
+        ImmutableList<RecParam> recParams = ImmutableList.of(
+                new RecParam("func_ret", "NUMBER", 0, "OUT"),
+                new RecParam("SOME", "VARCHAR2", 1, "IN"),
+                new RecParam("KEY", "NUMBER", 2, "IN"),
+                new RecParam("SECRETKEY", "NUMBER", 3, "IN"),
+                new RecParam("IP_ADDRESS", "VARCHAR2", 4, "IN"),
+                new RecParam("BROWSERTYPE", "VARCHAR2", 5, "IN"),
+                new RecParam("TEXTUALINFO", "VARCHAR2", 6, "IN"),
+                new RecParam("CLOBPARAM", "CLOB", 7, "IN/OUT"),
+                new RecParam("XML", "CLOB", 8, "IN/OUT"),
+                new RecParam("XSL_ID", "NUMBER", 9, "IN/OUT")
+        );
+
+
+        OracleTypeParameterProvider parameterProvider = new OracleTypeParameterProvider(recParams);
+
+
+    }
+
 
     private HttpServletRequest getHttpServletRequestMock() {
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -425,4 +472,5 @@ public class AppCommandTest {
 
         return session;
     }
+
 }
