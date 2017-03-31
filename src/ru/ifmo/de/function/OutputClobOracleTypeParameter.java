@@ -22,8 +22,8 @@ public class OutputClobOracleTypeParameter extends OracleTypeParameter<String> {
     public boolean prepareCallableStatement(ParamValueSource valueSource, OracleCallableStatement cs) {
         checkNotNull(cs);
         checkNotNull(valueSource);
-
         try{
+            System.out.println("registring " + oracleType + " at " + position + " for " + name);
             cs.registerOutParameter(position,oracleType);
             return true;
         } catch (SQLException e) {

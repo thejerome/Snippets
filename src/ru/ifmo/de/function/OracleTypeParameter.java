@@ -53,20 +53,7 @@ public abstract class OracleTypeParameter<T> extends Parameter<T> {
 
     protected boolean inAndOutCommonPreparing(ParamValueSource valueSource, OracleCallableStatement cs) {
         boolean res = inCommonPreparingCS(valueSource, cs);
-        res = outCommonPreparingCS(cs, res);
-        return res;
-    }
-
-    protected boolean outCommonPreparingCS(OracleCallableStatement cs, boolean res) {
-        checkNotNull(cs);
-        if (isOutput()){
-            try {
-                cs.registerOutParameter(position, oracleType);
-                res = true;
-            } catch (SQLException e) {
-                res = false;
-            }
-        }
+        res = outCommonPreparingCS(cs);
         return res;
     }
 
@@ -76,6 +63,8 @@ public abstract class OracleTypeParameter<T> extends Parameter<T> {
         if (isInput()){
             try{
                 T value = lookForValue(valueSource);
+
+                System.out.println("setting " + value + " to " + name + ":" + position);
                 setters.get(clazz).setValueToCS(cs, position, value);
 
                 if(value != null){
@@ -88,7 +77,25 @@ public abstract class OracleTypeParameter<T> extends Parameter<T> {
         return res;
     }
 
+    protected boolean outCommonPreparingCS(OracleCallableStatement cs) {
+        boolean res = false;
+        checkNotNull(cs);
+        if (isOutput()){
+            try {
+                System.out.println("registring " + oracleType + " at " + position + " for " + name);
+                cs.registerOutParameter(position, oracleType);
+                res = true;
+            } catch (SQLException e) {
+                res = false;
+            }
+        }
+        return res;
+    }
 
+
+    public boolean isRetValParameter() {
+        return name.equals("retVal");
+    }
 
     private static Map<Class, CSValueSetter> setters = ImmutableMap.<Class, CSValueSetter>builder()
             .put(String.class, (cs, pos, val) -> cs.setString(pos, (String) val))

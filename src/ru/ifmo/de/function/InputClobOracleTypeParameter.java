@@ -66,9 +66,4 @@ public class InputClobOracleTypeParameter extends OracleTypeParameter {
         return true;
     }
 
-    @Override
-    public ClobStreams getValue(OracleCallableStatement cs) {
-        return null;
-    }
-
 }

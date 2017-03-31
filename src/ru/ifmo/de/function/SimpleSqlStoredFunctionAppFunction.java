@@ -38,8 +38,9 @@ public class SimpleSqlStoredFunctionAppFunction implements AppFunction {
 
     AppFunctionResult call(Connection connection, ParamValueSource paramValueSource) {
 
-        try {
-            OracleCallableStatement cs = (OracleCallableStatement) connection.prepareCall(getQuery());
+        System.out.println(getQuery());
+        try (OracleCallableStatement cs = (OracleCallableStatement) connection.prepareCall(getQuery())){
+
 
             parameters.stream()
                     .peek(System.out::println)
@@ -71,7 +72,7 @@ public class SimpleSqlStoredFunctionAppFunction implements AppFunction {
         if (parameterTemplate == null)
             parameterTemplate = join("", "(",
                     parameters.stream().sequential()
-                            .filter(p -> p.position != 0)
+                            .filter(p -> !p.isRetValParameter())
                             .map(p -> "?")
                             .collect(Collectors.joining(",")),
                     ")");
@@ -82,7 +83,7 @@ public class SimpleSqlStoredFunctionAppFunction implements AppFunction {
         if (query == null)
             query = join("",
                 "{",
-                parameters.stream().anyMatch(p -> p.position == 0) ? "? = call " : "call ",
+                parameters.stream().anyMatch(p -> p.isRetValParameter()) ? "? = call " : "call ",
                 fullName,
                 getParameterTemplate(),
                 "}"

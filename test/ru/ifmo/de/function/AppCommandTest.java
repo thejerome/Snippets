@@ -269,7 +269,7 @@ public class AppCommandTest {
 
     @Test
     public void sqlCallableStatementFunctionRealExampleQueryIsOk() {
-        NumberOracleTypeParameter ret = new NumberOracleTypeParameter("return", OUT, NUMBER, 0);
+        NumberOracleTypeParameter ret = new NumberOracleTypeParameter("retVal", OUT, NUMBER, 0);
         NumberOracleTypeParameter key = new NumberOracleTypeParameter("KEY", IN, NUMBER, 1);
         NumberOracleTypeParameter id = new NumberOracleTypeParameter("ID_", IN, NUMBER, 2);
         TextOracleTypeParameter back = new TextOracleTypeParameter("BACK", IN, LONGVARCHAR, 3);
@@ -319,7 +319,7 @@ public class AppCommandTest {
     public void sqlCallableStatementFunctionBasicApi() {
         //cs = conn.prepareCall("{? = call " + schema + "." + "DE_COMMON" + ".sch_addScheduleEvent(?,?,?,?,?,?,?,?)}");
 
-        OracleTypeParameter retparam = new NumberOracleTypeParameter("returning", OUT, INTEGER, 0);
+        OracleTypeParameter retparam = new NumberOracleTypeParameter("retVal", OUT, INTEGER, 0);
         OracleTypeParameter intparam = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
         OracleTypeParameter int2param = new NumberOracleTypeParameter("intparam", IN, INTEGER, 1);
 
