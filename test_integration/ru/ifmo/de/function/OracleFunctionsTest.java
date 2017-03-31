@@ -114,15 +114,6 @@ public class OracleFunctionsTest {
 
         List<OracleTypeParameter> params = ImmutableList.of(ret, key, id, back, xml, xsl, xslid);
 
-
-
-
-        ConnectionBasedSimpleSqlStoredFunctionAppFunction function = new ConnectionBasedSimpleSqlStoredFunctionAppFunction(
-                DbConnectionProvider.connect(),
-                new SimpleSqlStoredFunctionAppFunction("DE_PORTFOLIO.signAwardPortfolio", params)
-        );
-
-
         ParamValueSource valueSource = new MultiParamValueSource(
                 ImmutableMap.<String, Object>builder()
                         .put("KEY", new BigDecimal(1))
@@ -131,9 +122,15 @@ public class OracleFunctionsTest {
                         .build()
         );
 
-        function.call(valueSource);
+        try (Connection connection = DbConnectionProvider.connect()) {
 
+            ConnectionBasedSimpleSqlStoredFunctionAppFunction function = new ConnectionBasedSimpleSqlStoredFunctionAppFunction(
+                    connection,
+                    new SimpleSqlStoredFunctionAppFunction("DE_PORTFOLIO.signAwardPortfolio", params)
+            );
 
+            function.call(valueSource);
+        }
 
 
     }
